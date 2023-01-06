@@ -1,0 +1,59 @@
+version: "3.7"
+
+networks:
+  network:
+
+volumes:
+  pgdata:
+
+services:
+# Kong: The API Gateway
+  kong:
+    image: kong:3.1
+    container_name: qidian-kong
+    restart: always
+    networks:
+      - network
+    env_file:
+      - kong.env.example
+    ports:
+      - 48000:8000 # 接收处理 http 流量
+      - 48443:8443 # 接收处理 https 流量
+      #- 8001:8001 # http 管理 API
+      #- 8444:8444 # https 管理 API
+    volumes:
+      - './plugins/soc-log:/usr/local/share/lua/5.1/kong/plugins/soc-log'
+      - './plugins/soc-ip-restriction:/usr/local/share/lua/5.1/kong/plugins/soc-ip-restriction'
+      - './plugins/soc-rate-limiting:/usr/local/share/lua/5.1/kong/plugins/soc-rate-limiting'
+      - './plugins/constants.lua:/usr/local/share/lua/5.1/kong/constants.lua'
+##      - './kong-log:/tmp'
+    depends_on:
+      - postgresql
+
+# Konga: Kong GUI
+  konga:
+    image: pantsel/konga:0.14.9
+    container_name: qidian-konga
+    restart: always
+    networks:
+      - network
+    env_file:
+      - kong.env.example
+    ports:
+      - 41337:1337
+    depends_on:
+      - postgresql
+
+# PostgeSQL Datebase
+  postgresql:
+    image: postgres:11.1-alpine
+    container_name: qidian-postgresql
+    restart: always
+    networks:
+      - network
+    ports:
+      - 54324:5432
+    env_file:
+      - kong.env.example
+    volumes:
+      - pgdata:/var/lib/postgresql/data
